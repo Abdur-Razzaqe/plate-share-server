@@ -111,20 +111,20 @@ async function run() {
       }
     });
 
-    // app.delete("/foods/:id", async (req, res) => {
-    //   try {
-    //     const { id } = req.params;
-    //     const result = await foodCollection.deleteOne({
-    //       _id: new ObjectId(id),
-    //     });
-    //     res.send({ success: true, result });
-    //   } catch (err) {
-    //     console.error(err);
-    //     res
-    //       .status(500)
-    //       .send({ success: false, error: "Failed to delete food" });
-    //   }
-    // });
+    app.delete("/foods/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const result = await foodCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .send({ success: false, error: "Failed to delete food" });
+      }
+    });
 
     app.post("/foods/:id/request", async (req, res) => {
       const foodId = req.params.id;
@@ -187,9 +187,11 @@ async function run() {
     app.get("/foods/search", async (req, res) => {
       try {
         const search = req.query.q || "";
-        const result = await foodCollection
-          .find({ food_name: { $regex: search, $option: "i" } })
-          .toArray();
+        let query = {};
+        if (search.trim) {
+          query = { food_name: { $regex: `^${search}`, $option: "i" } };
+        }
+        const result = await foodCollection.find(query).toArray();
         res.send({ success: true, result });
       } catch (err) {
         console.error(err);
