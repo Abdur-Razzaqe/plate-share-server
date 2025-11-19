@@ -30,6 +30,7 @@ async function run() {
     app.get("/foods", async (req, res) => {
       try {
         const email = req.query.email;
+
         const query = email ? { "donator.email": email } : {};
 
         const result = await foodCollection.find(query).toArray();
@@ -127,6 +128,7 @@ async function run() {
     });
 
     app.post("/foods/:id/request", async (req, res) => {
+      // try {
       const foodId = req.params.id;
       const requestData = req.body;
       requestData.foodId = foodId;
@@ -135,9 +137,14 @@ async function run() {
 
       const result = await requestsCollection.insertOne(requestData);
       res.send({ success: true, insertedId: result.insertedId });
+      // } catch (error) {
+      //   console.error(err);
+      //   res.status(500).send({ error: "Failed to create request" });
+      // }
     });
 
     app.get("/foods/:id/requests", async (req, res) => {
+      // try {
       const foodId = req.params.id;
       console.log("found", req.params.id);
 
