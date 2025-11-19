@@ -28,107 +28,173 @@ async function run() {
     console.log("Connected to bd");
 
     app.get("/foods", async (req, res) => {
-      const email = req.query.email;
-      const query = email ? { "donator.email": email } : {};
+      try {
+        const email = req.query.email;
+        const query = email ? { "donator.email": email } : {};
 
-      const result = await foodCollection.find(query).toArray();
-      res.send({ success: true, result });
+        const result = await foodCollection.find(query).toArray();
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .send({ success: false, error: "Failed to fetch foods" });
+      }
     });
 
     app.get("/foods/:id", async (req, res) => {
-      const { id } = req.params;
-      const result = await foodCollection.findOne({ _id: new ObjectId(id) });
-      if (!result)
-        return res
-          .status(404)
-          .send({ success: false, message: "Food not Found" });
-
-      res.send({
-        success: true,
-        result,
-      });
+      try {
+        const { id } = req.params;
+        const result = await foodCollection.findOne({ _id: new ObjectId(id) });
+        if (!result)
+          return res
+            .status(404)
+            .send({ success: false, message: "Food not Found" });
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, error: "Failed to fetch food" });
+      }
     });
 
     app.post("/foods", async (req, res) => {
-      const data = req.body;
-
-      const foodData = {
-        ...data,
-        donator: {
-          name: data.donator?.name || data.donator_Name || "Unknown",
-          email:
-            data.donator?.email || data.donator_email || "Unknown@email.com",
-          image: data.donator?.image || data.donator_image || "",
-        },
-        foods_status: data.food_status || "Available",
-        createdAt: new Date(),
-      };
-      const result = await foodCollection.insertOne(foodData);
-      res.send({
-        success: true,
-        result,
-      });
+      try {
+        const data = req.body;
+        const foodData = {
+          ...data,
+          donator: {
+            name: data.donator?.name || data.donator_Name || "Unknown",
+            email:
+              data.donator?.email || data.donator_email || "Unknown@email.com",
+            image: data.donator?.image || data.donator_image || "",
+          },
+          food_status: data.food_status || "Available",
+          createdAt: new Date(),
+        };
+        const result = await foodCollection.insertOne(foodData);
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, error: "Failed to fetch food" });
+      }
     });
 
     app.put("/foods/:id", async (req, res) => {
-      const { id } = req.params;
-      const updateData = req.body;
-      const result = await foodCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: updateData }
-      );
-      res.send({
-        success: true,
-        result,
-      });
+      try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const result = await foodCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateData }
+        );
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .send({ success: false, error: "Failed to update food" });
+      }
+    });
+
+    app.patch("/foods/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const result = await foodCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateData }
+        );
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, error: "Failed to patch food" });
+      }
     });
 
     app.delete("/foods/:id", async (req, res) => {
-      const { id } = req.params;
-      const result = await foodCollection.deleteOne({ _id: new ObjectId(id) });
-      res.send({
-        success: true,
-        result,
-      });
+      try {
+        const { id } = req.params;
+        const result = await foodCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .send({ success: false, error: "Failed to delete food" });
+      }
+    });
+
+    app.post("/foods/:id/request", async (req, res) => {
+      const foodId = req.params.id;
+      const requestData = req.body;
+      requestData.foodId = foodId;
+      requestData.status = "pending";
+      requestData.requestDate = new Date();
+
+      const result = await requestsCollection.insertOne(requestData);
+      res.send({ success: true, insertedId: result.insertedId });
+    });
+
+    app.get("/foods/:id/requests", async (req, res) => {
+      const foodId = req.params.id;
+      console.log("found", req.params.id);
+
+      const result = await requestsCollection
+        .find({ foodId: foodId })
+        .toArray();
+
+      res.send({ success: true, result });
+    });
+
+    app.patch("/foods/:foodId/requests/:reqId", async (req, res) => {
+      try {
+        const { reqId } = req.params;
+        const { status } = req.body;
+        const result = await requestsCollection.updateOne(
+          { _id: new ObjectId(reqId) },
+          { $set: { status } }
+        );
+
+        if (status === "accepted") {
+          await foodCollection.updateOne(
+            { _id: new ObjectId(req.params.foodId) },
+            { $set: { food_status: "donated" } }
+          );
+        }
+
+        res.send(result);
+      } catch (err) {
+        res
+          .status(500)
+          .send({ success: false, error: "Failed to update request" });
+      }
     });
 
     app.get("/requests", async (req, res) => {
-      const result = await requestsCollection.find().toArray();
-      res.send({
-        success: true,
-        result,
-      });
-    });
-
-    app.post("/requests", async (req, res) => {
-      const { id } = req.params;
-      const request = req.body;
-
-      const result = await requestsCollection.insertOne(request);
-      res.send({ success: true, result });
-    });
-
-    app.get("/foodRequest/:foodId", async (req, res) => {
-      const { foodId } = req.params;
-      const requests = await requestsCollection.find({ foodId }).toArray();
-      res.send({ success: true, requests });
-    });
-
-    app.put("/foodRequests/:id", async (req, res) => {
-      const { id } = req.params;
-      const { status } = req.body;
-      const result = await requestsCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { status } }
-      );
-
-      if (status === "accepted") {
-        await requestsCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { food_status: "donated" } }
-        );
+      try {
+        const result = await requestsCollection.find().toArray();
+        res.send(result);
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .send({ success: false, error: "Failed to get request" });
       }
-      res.send({ success: true, result });
+    });
+
+    app.get("/foods/search", async (req, res) => {
+      try {
+        const search = req.query.q || "";
+        const result = await foodCollection
+          .find({ food_name: { $regex: search, $option: "i" } })
+          .toArray();
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, error: "Search failed" });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
