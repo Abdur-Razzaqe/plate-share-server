@@ -184,6 +184,21 @@ async function run() {
       }
     });
 
+    app.get("/foods/search", async (req, res) => {
+      try {
+        const search = req.query.q || "";
+        let query = {};
+        if (search.trim) {
+          query = { food_name: { $regex: `^${search}`, $option: "i" } };
+        }
+        const result = await foodCollection.find(query).toArray();
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, error: "Search failed" });
+      }
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
