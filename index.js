@@ -20,7 +20,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("share-db");
     const foodCollection = db.collection("foods");
@@ -128,7 +128,6 @@ async function run() {
     });
 
     app.post("/foods/:id/request", async (req, res) => {
-      // try {
       const foodId = req.params.id;
       const requestData = req.body;
       requestData.foodId = foodId;
@@ -137,14 +136,9 @@ async function run() {
 
       const result = await requestsCollection.insertOne(requestData);
       res.send({ success: true, insertedId: result.insertedId });
-      // } catch (error) {
-      //   console.error(err);
-      //   res.status(500).send({ error: "Failed to create request" });
-      // }
     });
 
     app.get("/foods/:id/requests", async (req, res) => {
-      // try {
       const foodId = req.params.id;
       console.log("found", req.params.id);
 
@@ -206,7 +200,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
